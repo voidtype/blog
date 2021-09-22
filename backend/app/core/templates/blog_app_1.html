@@ -1,0 +1,38 @@
+
+{% block appform %}
+ <body>
+    <form method="post" enctype="multipart/form-data">{% csrf_token %}
+      <input type="file" name="attachment"  />
+      <input type="submit" value="Upload File" name="submit" />
+    </form>
+    <script>
+        const url = '/upload_file';
+        const form = document.querySelector('form');
+
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+
+            const file = document.querySelector('[type=file]').files[0];
+            const formData = new FormData();
+
+            //get the csrf from the DOM then add it to the request header
+            const request = new Request(
+                url,
+                {headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value}}
+            );
+            formData.set('attachment', file);
+
+
+
+            fetch(request, {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                return response.text();
+            }).then(data => {
+                console.log(data);
+            });
+        });
+    </script>
+  </body>
+{% endblock %}

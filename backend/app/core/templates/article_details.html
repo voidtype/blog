@@ -4,5 +4,7 @@
     <small>By {{ post.author }}</small>
     <hr>
 <br/>
+        {% include post.app_template %}
+
     {{ post.body|safe }}
 {% endblock %}

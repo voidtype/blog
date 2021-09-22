@@ -24,6 +24,7 @@ from core.views import HomeView, ArticleView
 
 urlpatterns = [
     path('',views.index, name='index'),
+    path('upload_file',views.upload_file, name='upload_files'),
     path('admin/', admin.site.urls),
     path("graphql", csrf_exempt(GraphQLView.as_view(graphiql=True))),
     path('home', HomeView.as_view(), name="home"),

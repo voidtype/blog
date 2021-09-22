@@ -1,8 +1,10 @@
 from django.db import models
 from django.conf import settings
 
+
 class Sample(models.Model):
     attachment = models.FileField()
+
 
 class Profile(models.Model):
     user = models.OneToOneField(
@@ -15,15 +17,19 @@ class Profile(models.Model):
     def __str__(self):
         return self.user.get_username()
 
+
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.name
+
+
 class Post(models.Model):
     class Meta:
         ordering = ["-publish_date"]
 
+    app_template = models.CharField(max_length=255, unique=False, blank=True)
     title = models.CharField(max_length=255, unique=True)
     subtitle = models.CharField(max_length=255, blank=True)
     slug = models.SlugField(max_length=255, unique=True)
@@ -36,4 +42,3 @@ class Post(models.Model):
 
     author = models.ForeignKey(Profile, on_delete=models.PROTECT)
     tags = models.ManyToManyField(Tag, blank=True)
-
