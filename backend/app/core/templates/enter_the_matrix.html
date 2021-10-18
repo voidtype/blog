@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+    <script>
+        const getConfigs = async () => {
+            const response = await fetch("http://localhost:81/configs");
+            const myJson = await response.json();
+            var listDiv = document.getElementById('config-list');
+            var ul=document.createElement('ul');
+            for(var i = 0; i < myJson.length; ++i){
+                var butt = document.createElement('button');
+                butt.innerHTML=myJson[i].device;
+                butt.onclick=insertPic(myJson[i].device);
+                ul.appendChild(butt);
+            }
+            listDiv.appendChild(ul);
+        }
+
+        const insertPic = async (device) => {
+            const response = await fetch("http://localhost:81/samples/"+device);
+            const myJson = await response.json();
+            var picDiv = document.getElementById('pics');
+            var img=document.createElement('img');
+            img.src = "http://localhost:81" + myJson.attachment;
+            picDiv.appendChild(img);
+        }
+
+        const loadSensor = async () => {
+            device = "954f33b2-096b-4000-aae7-35dcdc0b28b4";
+            const response = await fetch("http://localhost:81/readings/?="+device);
+            const myJson = await response.json();
+            var data = [];
+            data.push([])
+            for (var i = 0; i  < myJson.length; ++i){
+                data[0].push(new Date(myJson[i]['time']).getTime()/1000);
+            }
+            data.push([])
+            for (var i = 0; i  < myJson.length; ++i){
+                data[1].push(myJson[i]['psi']);
+            }
+            let opts = {
+					width:    800,
+					height: 800,
+					title: "Matrix pressure",
+					axes: [
+						{
+						//	rotate: -45,
+						},
+						{
+							show: true,
+
+						},
+					],
+					legend: {
+						live: false,
+						markers: {
+							width: 0,
+						}
+					},
+					padding: [null, 0, null, 0],
+					series: [
+                        {},
+						{
+							label: "PSI",
+                            show:true,
+                            stroke: "red",
+                            width: 1,
+						}
+					],
+				};
+            console.log(data);
+            let u = uPlot(opts,data,document.getElementById('plotty'))
+            return data;
+        }
+
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.7/dist/uPlot.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/uplot@1.6.7/dist/uPlot.iife.js"></script>
+    <button type="submit" onclick="getConfigs()">Do it</button>
+    <div id="config-list">
+
+    </div>
+
+    <div id="pics">
+
+    </div>
+    <div id="plotty">
+
+    </div>
+
+</html>
