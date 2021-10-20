@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html>
     <script>
-        const DEVICE_UUID = "954f33b2-096b-4000-aae7-35dcdc0b28b4";
+        const DEVICE_UUID = "48a6118c-f22e-48b9-b4c6-3bcdd6d8641d";
+	const MATRIX_HOST = "http://144.202.8.17:81"
         var data = [];
         var u = "";
         var tzOffset = 0;
         var configInit = false;
 
         const getConfigs = async () => {
-            const response = await fetch("http://localhost:81/configs/"+DEVICE_UUID);
+            const response = await fetch(MATRIX_HOST+"/configs/"+DEVICE_UUID);
             const myJson = await response.json();
 
             document.getElementById("tbpm").innerHTML=myJson["bpm"];
@@ -29,12 +30,12 @@
         }
 
         const insertPic = async () => {
-            const response = await fetch("http://localhost:81/samples/"+DEVICE_UUID);
+            const response = await fetch(MATRIX_HOST+"/samples/"+DEVICE_UUID);
             const myJson = await response.json();
             var picDiv = document.getElementById('pics');
             picDiv.innerHTML = "";
             var img=document.createElement('img');
-            img.src = "http://localhost:81" + myJson.attachment;
+            img.src = MATRIX_HOST + myJson.attachment;
             img.style = "transform: rotate(90deg);"
             picDiv.appendChild(img);
         }
@@ -107,7 +108,7 @@
         }
 
         const loadSensorData = async () => {
-            const response = await fetch("http://localhost:81/readings/?="+DEVICE_UUID);
+            const response = await fetch(MATRIX_HOST+"/readings/?="+DEVICE_UUID);
             const myJson = await response.json();
             data = [];
             data.push([])
@@ -161,7 +162,7 @@
                 },
                 body: JSON.stringify(object) // We send data in JSON format
             }
-            fetch("http://localhost:81/configs/954f33b2-096b-4000-aae7-35dcdc0b28b4/", putMethod);
+            fetch(MATRIX_HOST+"/configs/"+DEVICE_UUID+"/", putMethod);
         }
 
         window.onload = function () {
