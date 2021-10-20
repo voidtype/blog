@@ -1,45 +1,48 @@
 <!DOCTYPE html>
 <html>
     <script>
+        const DEVICE_UUID = "954f33b2-096b-4000-aae7-35dcdc0b28b4";
+        var data = [];
+        var u = "";
+        var tzOffset = 0;
+        var configInit = false;
+
         const getConfigs = async () => {
-            const response = await fetch("http://localhost:81/configs");
+            const response = await fetch("http://localhost:81/configs/"+DEVICE_UUID);
             const myJson = await response.json();
-            var listDiv = document.getElementById('config-list');
-            var ul=document.createElement('ul');
-            for(var i = 0; i < myJson.length; ++i){
-                var butt = document.createElement('button');
-                butt.innerHTML=myJson[i].device;
-                butt.onclick=insertPic(myJson[i].device);
-                ul.appendChild(butt);
+
+            document.getElementById("tbpm").innerHTML=myJson["bpm"];
+            document.getElementById("tduty").innerHTML=myJson["duty"];
+            document.getElementById("tpressureMax").innerHTML=myJson["pressureMax"];
+            document.getElementById("tledState").innerHTML=myJson["ledState"];
+
+            if (!configInit)
+            {
+                document.getElementById("bpm").value=myJson["bpm"];
+                document.getElementById("duty").value=myJson["duty"];
+                document.getElementById("pressureMax").value=myJson["pressureMax"];
+                document.getElementById("ledState").value=myJson["ledState"];
+      
+                configInit = true;
             }
-            listDiv.appendChild(ul);
+
         }
 
-        const insertPic = async (device) => {
-            const response = await fetch("http://localhost:81/samples/"+device);
+        const insertPic = async () => {
+            const response = await fetch("http://localhost:81/samples/"+DEVICE_UUID);
             const myJson = await response.json();
             var picDiv = document.getElementById('pics');
+            picDiv.innerHTML = "";
             var img=document.createElement('img');
             img.src = "http://localhost:81" + myJson.attachment;
+            img.style = "transform: rotate(90deg);"
             picDiv.appendChild(img);
         }
 
-        const loadSensor = async () => {
-            device = "954f33b2-096b-4000-aae7-35dcdc0b28b4";
-            const response = await fetch("http://localhost:81/readings/?="+device);
-            const myJson = await response.json();
-            var data = [];
-            data.push([])
-            for (var i = 0; i  < myJson.length; ++i){
-                data[0].push(new Date(myJson[i]['time']).getTime()/1000);
-            }
-            data.push([])
-            for (var i = 0; i  < myJson.length; ++i){
-                data[1].push(myJson[i]['psi']);
-            }
+        function initChart(){
             let opts = {
-					width:    800,
-					height: 800,
+					width:    400,
+					height: 300,
 					title: "Matrix pressure",
 					axes: [
 						{
@@ -47,8 +50,16 @@
 						},
 						{
 							show: true,
-
+                            scale: "PSI",
+                            label: "Pressure (psi)",
 						},
+                        {
+							show: true,
+                            side: 1,
+                            scale: "PWM",
+                            label: "LED brightness (pwm)",
+                            grid: {show:false}
+						}, 
 					],
 					legend: {
 						live: false,
@@ -60,31 +71,181 @@
 					series: [
                         {},
 						{
+                            scale: "PSI",
 							label: "PSI",
                             show:true,
                             stroke: "red",
                             width: 1,
-						}
+                            spanGaps: true,
+						},
+                        {		
+                            scale: "PWM",
+							label: "LED brightness",
+                            show:true,
+                            stroke: "magenta",
+                            width: 1,
+                            spanGaps: true,
+						},                        {		
+                            scale: "binary",
+							label: "Solenoid",
+                            show:true,
+                            stroke: "silver",
+                            width: 1,
+                            spanGaps: true,
+						},
+                        {
+                            scale: "binary",
+							label: "Pump",
+                            show:true,
+                            stroke: "blue",
+                            width: 1,
+                            spanGaps: true,
+						},
 					],
 				};
-            console.log(data);
-            let u = uPlot(opts,data,document.getElementById('plotty'))
-            return data;
+            this.u = new uPlot(opts,data,document.getElementById('plotty'))         
         }
 
+        const loadSensorData = async () => {
+            const response = await fetch("http://localhost:81/readings/?="+DEVICE_UUID);
+            const myJson = await response.json();
+            data = [];
+            data.push([])
+            for (var i = 0; i  < myJson.length; ++i){
+                data[0].push(new Date(myJson[i]['time']).getTime()/1000 -tzOffset);
+            }
+            data.push([])
+            for (var i = 0; i  < myJson.length; ++i){
+                data[1].push(myJson[i]['psi']);
+            }
+            data.push([])
+            for (var i = 0; i  < myJson.length; ++i){
+                data[2].push(myJson[i]['ledState']);
+            }
+            data.push([])
+            for (var i = 0; i  < myJson.length; ++i){
+                data[3].push(myJson[i]['solenoidState']);
+            }
+            data.push([])
+            for (var i = 0; i  < myJson.length; ++i){
+                data[4].push(myJson[i]['pumpState']);
+            }
+            if(u){
+                u.setData(data);
+            }
+            else{
+                initChart();
+                u.setData(data);
+            }
+        }
+
+        function refreshContent(){
+            insertPic();
+            loadSensorData();
+            getConfigs();
+            setTimeout(refreshContent, 10000);
+
+        }
+
+        function formSubmit(){
+            var myForm = document.getElementById("config-form");
+            var formObj = new FormData(myForm);
+            var object = {};
+            formObj.forEach(function(value, key){
+                object[key] = value;
+            });
+            const putMethod = {
+                method: 'PUT', // Method itself
+                headers: {
+                'Content-type': 'application/json; charset=UTF-8' // Indicates the content 
+                },
+                body: JSON.stringify(object) // We send data in JSON format
+            }
+            fetch("http://localhost:81/configs/954f33b2-096b-4000-aae7-35dcdc0b28b4/", putMethod);
+        }
+
+        window.onload = function () {
+            date = new Date();
+            tzOffset = date.getTimezoneOffset() * 60;
+            refreshContent();
+        }
     </script>
+    <head>
+    <style>
+        label {font-size: 10px; font-weight: bold;}
+        img {flex:0; width: 360px;}
+        .uplot{flex:1;flex-grow: 1;}
+        #tabby{flex:1;flex-grow: 1; margin:1rem; font-size: 12px; }
+        #matrixcontent{display:flex !important; align-items: center; flex-wrap: nowrap;}
+    </style>
+    </head>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.7/dist/uPlot.min.css">
     <script src="https://cdn.jsdelivr.net/npm/uplot@1.6.7/dist/uPlot.iife.js"></script>
-    <button type="submit" onclick="getConfigs()">Do it</button>
+    <div id="matrixcontent">
+        <span>
+            <h5 style="text-align: center; font-weight: bold; ">Matrix image</h5>
+            <div id="pics"></div>
+        </span>
+        <span id="plotty">
+    
+        </span>
+        <span id="tabby">
+            <h5 style="padding: 1rem; text-align: center; font-weight: bold;">Current config</h5>
+            <table class="table table-secondary table-striped">
+                <thead>
+                    <tr>
+                      <th scope="col">Setting</th>
+                      <th scope="col">Value</th>
+                    </tr>
+                    <tbody>
+                        <tr>
+                          <td>Spray freq</td>
+                          <td id="tbpm"></td>
+                        </tr>
+                        <tr>
+                            <td>Solenoid duty</td>
+                            <td id="tduty"></td>
+                          </tr>
+                        <tr>
+                            <td>Max pressure</td>
+                            <td id="tpressureMax"></td>
+                        </tr>
+                        <tr>
+                            <td>LED brightness</td>
+                            <td id="tledState"></td>
+                        </tr>
+                    </tbody>
+                </thead>
+            </table>
+        </span>
+    </div>
+    <hr />
+    <form id="config-form">
+        <legend style="font-weight: bold;font-size:1.25rem;">Matrix configuration</legend>
+        <div id="config" class="row">
+            <div class="form-group col-md-2">
+                <label for="bpm">Spray frequency (sprays/min)</label>
+                <input id="bpm" name="bpm" class="form-control" type="number" step=".001" min="0.05" max="6"></input>
+            </div>
+            <div class="form-group col-md-2">
+                <label for="duty">Solenoid duty (x Spray Freq)</label>
+                <input id="duty" name="duty" class="form-control" type="number" step=".0001" min="0.005" max="0.20"></input>
+            </div>  
+            <div class="form-group col-md-2">
+                <label for="pressureMax">Max pressure (psi)</label>
+                <input id="pressureMax" name="pressureMax" class="form-control" type="number" step="1" min="55" max="125"></input>
+            </div>
+            <div class="form-group col-md-2">
+                <label for="ledState">LED brightness</label>
+                <input id="ledState" name="ledState" type="range" min=0 max=255 step=1 value=255></input>
+            </div>
+            <button class="btn btn-primary col-md-1" onclick="formSubmit()">Update</button>
+        </div>
+    </form>
     <div id="config-list">
 
     </div>
 
-    <div id="pics">
 
-    </div>
-    <div id="plotty">
-
-    </div>
 
 </html>
